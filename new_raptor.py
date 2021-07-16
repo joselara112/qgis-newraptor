@@ -31,6 +31,8 @@ from qgis.core import QgsProject, QgsFeature, QgsGeometry, QgsPoint
 from .resources import *
 # Import the code for the dialog
 from .new_raptor_dialog import NewRaptorDialog
+from .impact_table import DlgTable
+
 import os.path
 
 
@@ -255,6 +257,10 @@ class NewRaptor:
             ftrNest.setGeometry(buffer)#dado que las capas nest y buffer tienen los mismos atributos, se puede seguir usando la misma variable pero ahora con la neuva geometria
             pr.addFeatures([ftrNest])
             lyrBuffer.reload()
+
+            dlgTable = DlgTable()
+            dlgTable.show()
+            dlgTable.exec()
             
 
             
