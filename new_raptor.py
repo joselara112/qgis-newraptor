@@ -23,7 +23,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QDate
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QMessageBox
+from qgis.PyQt.QtWidgets import QAction, QMessageBox, QTableWidgetItem
 
 from qgis.core import QgsProject, QgsFeature, QgsGeometry, QgsPoint
 
@@ -211,6 +211,8 @@ class NewRaptor:
             missing_layers.append('Raptor Nest')
         if not 'Raptor Buffer' in map_layer:
             missing_layers.append('Raptor Buffer')
+        if not 'Linear Buffer' in map_layer:
+            missing_layers.append('Linear Buffer')
         if missing_layers:
             msg = 'The following layers are missing from this project\n'
             for lyr in missing_layers:
@@ -229,6 +231,7 @@ class NewRaptor:
             # substitute with your code.
             lyrNests = QgsProject.instance().mapLayersByName('Raptor Nests')[0]
             lyrBuffer = QgsProject.instance().mapLayersByName('Raptor Buffer')[0]
+            lyrLinear = QgsProject.instance().mapLayersByName('Linear Buffer')[0]
             idxNestID = lyrNests.fields().indexOf('Nest_ID')
             valNestID = lyrNests.maximumValue(idxNestID) + 1
             valLat = self.dlg.spbLat.value()
@@ -253,12 +256,27 @@ class NewRaptor:
             lyrNests.reload()
 
             pr = lyrBuffer.dataProvider()#data provider de la layer de buffer
-            buffer = geom.buffer(valBuffer, 10)#crea la geometria que tendra la capa buffer a partir de la geometria de puntos de la capa nest. 10 es la cantidad de vertices que tendra el buffer
+            buffer = geom.buffer(valBuffer, 10)#el method buffer crea la geometria que tendra la capa buffer a partir de la geometria de puntos de la capa nest. 10 es la cantidad de vertices que tendra el buffer
             ftrNest.setGeometry(buffer)#dado que las capas nest y buffer tienen los mismos atributos, se puede seguir usando la misma variable pero ahora con la neuva geometria
             pr.addFeatures([ftrNest])
             lyrBuffer.reload()
 
             dlgTable = DlgTable()
+            #find linear projects that will be impacted and report them in the table
+            bb = buffer.boundingBox()#el method boundingBox crea el rectangulo mas pequeno con la geometria de buffer
+            linears = lyrLinear.getFeatures()
+            for linear in linears:
+                valID = linear.attribute('Project')
+                valType = linear.attribute('type')
+                valDistance = linear.geometry().distance(geom)#el method distance de geometry calcula la distancia del feature al punto dado en geom, que en nuestro caso es el punto del nuevo nest
+                if valDistance < valBuffer:
+                    #QMessageBox.information(self.dlg, 'Message', 'valDistance < valBuffer')
+                    #populate table with linear data
+                    row = dlgTable.tableimpacts.rowCount()
+                    dlgTable.tableimpacts.insertRow(row)
+                    dlgTable.tableimpacts.setItem(row, 0, QTableWidgetItem(str(valID)))
+                    dlgTable.tableimpacts.setItem(row, 1, QTableWidgetItem(str(valType)))
+                    dlgTable.tableimpacts.setItem(row, 2, QTableWidgetItem(str('{:4.5f}'.format(valDistance))))
             dlgTable.show()
             dlgTable.exec()
             
